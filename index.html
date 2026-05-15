@@ -2,152 +2,216 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>AR Simple</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>AR Object Share - Sube cualquier modelo</title>
     <style>
-        body { font-family: Arial; text-align: center; padding: 20px; }
-        #qr { margin: 20px auto; }
-        button { padding: 10px 20px; font-size: 18px; margin: 10px; }
-        input { margin: 10px; }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a2e;
+            color: white;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+        }
+        
+        .upload-area {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        input[type="file"] {
+            margin: 15px 0;
+            padding: 10px;
+        }
+        
+        button {
+            background: #0f3460;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background: #e94560;
+        }
+        
+        .qr-area {
+            background: #16213e;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            display: none;
+        }
+        
+        #qr-code {
+            margin: 20px auto;
+        }
+        
+        .link-box {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .link-box input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+        }
+        
+        .link-box button {
+            margin: 0;
+        }
+        
+        .ar-viewer {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            background: black;
+        }
+        
+        model-viewer {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .close-ar {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            background: red;
+            padding: 10px 15px;
+            border-radius: 50%;
+            font-size: 20px;
+        }
     </style>
 </head>
 <body>
 
-<h1>📦 Sube tu modelo GLB</h1>
-<input type="file" id="fileInput" accept=".glb">
-<button id="generateBtn">Generar QR y Enlace</button>
+<div class="container" id="main-ui">
+    <h1>📦 AR Object Share</h1>
+    
+    <div class="upload-area">
+        <h3>1. Sube tu modelo GLB</h3>
+        <input type="file" id="model-file" accept=".glb">
+        <br>
+        <button id="use-demo">Usar modelo demo (Horse)</button>
+    </div>
+    
+    <div class="qr-area" id="qr-area">
+        <h3>2. Comparte este QR o enlace</h3>
+        <div id="qr-code"></div>
+        <div class="link-box">
+            <input type="text" id="share-link" readonly>
+            <button id="copy-link">Copiar</button>
+        </div>
+        <p style="font-size: 12px; margin-top: 15px;">📱 Escanea con tu teléfono para ver en AR</p>
+    </div>
+</div>
 
-<div id="qr" style="display:none;"></div>
-<input type="text" id="link" style="width:300px; display:none;" readonly>
-<button id="copyBtn" style="display:none;">Copiar Enlace</button>
+<div class="ar-viewer" id="ar-viewer">
+    <button class="close-ar" id="close-ar">✕</button>
+    <model-viewer id="model-viewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls auto-rotate environment-image="neutral"></model-viewer>
+</div>
 
-<script>
-// Generar QR simple
-function generarQR(texto) {
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(texto)}`;
-    const img = document.createElement('img');
-    img.src = qrUrl;
-    const div = document.getElementById('qr');
-    div.innerHTML = '';
-    div.appendChild(img);
-    div.style.display = 'block';
-}
-
-// Cuando suben archivo
-document.getElementById('fileInput').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (file) {
-        const url = URL.createObjectURL(file);
-        window.modeloURL = url;
-        alert('Modelo cargado: ' + file.name);
+<script type="module">
+    // Importar ModelViewer
+    import 'https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js';
+    
+    // Elementos
+    const fileInput = document.getElementById('model-file');
+    const useDemoBtn = document.getElementById('use-demo');
+    const qrArea = document.getElementById('qr-area');
+    const shareLink = document.getElementById('share-link');
+    const copyLinkBtn = document.getElementById('copy-link');
+    const arViewer = document.getElementById('ar-viewer');
+    const closeArBtn = document.getElementById('close-ar');
+    const modelViewer = document.getElementById('model-viewer');
+    
+    let currentModelUrl = null;
+    
+    // Generar QR
+    function generarQR(texto) {
+        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(texto)}`;
+        const img = document.createElement('img');
+        img.src = qrUrl;
+        const div = document.getElementById('qr-code');
+        div.innerHTML = '';
+        div.appendChild(img);
     }
-});
-
-// Generar QR y link
-document.getElementById('generateBtn').addEventListener('click', () => {
-    if (!window.modeloURL) {
-        alert('Primero sube un modelo GLB');
-        return;
+    
+    // Mostrar opciones para compartir
+    function mostrarCompartir(url) {
+        const baseUrl = window.location.origin + window.location.pathname;
+        const shareUrl = `${baseUrl}?model=${encodeURIComponent(url)}`;
+        shareLink.value = shareUrl;
+        generarQR(shareUrl);
+        qrArea.style.display = 'block';
     }
     
-    const base = window.location.origin + window.location.pathname;
-    const shareUrl = `${base}?model=${encodeURIComponent(window.modeloURL)}`;
-    
-    document.getElementById('link').value = shareUrl;
-    document.getElementById('link').style.display = 'inline-block';
-    document.getElementById('copyBtn').style.display = 'inline-block';
-    
-    generarQR(shareUrl);
-});
-
-// Copiar enlace
-document.getElementById('copyBtn').addEventListener('click', () => {
-    const link = document.getElementById('link');
-    link.select();
-    document.execCommand('copy');
-    alert('Enlace copiado');
-});
-
-// Si la URL tiene modelo, mostrar AR
-const urlParams = new URLSearchParams(window.location.search);
-const modelParam = urlParams.get('model');
-if (modelParam) {
-    document.body.innerHTML = '<div id="status">Iniciando AR...</div><div id="ar-container"></div>';
-    iniciarAR(decodeURIComponent(modelParam));
-}
-
-async function iniciarAR(modelUrl) {
-    const THREE = await import('https://unpkg.com/three@0.128.0/build/three.module.js');
-    const { ARButton } = await import('https://unpkg.com/three@0.128.0/examples/jsm/webxr/ARButton.js');
-    const { GLTFLoader } = await import('https://unpkg.com/three@0.128.0/examples/jsm/loaders/GLTFLoader.js');
-    
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.xr.enabled = true;
-    document.getElementById('ar-container').appendChild(renderer.domElement);
-    
-    // Luz
-    const light = new THREE.AmbientLight(0xffffff, 0.7);
-    scene.add(light);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(1, 2, 1);
-    scene.add(dirLight);
-    
-    // Cargar modelo
-    const loader = new GLTFLoader();
-    let model;
-    loader.load(modelUrl, (gltf) => {
-        model = gltf.scene;
-        model.scale.set(0.2, 0.2, 0.2);
-        scene.add(model);
-        document.getElementById('status').innerHTML = '✅ Modelo listo. Toca para colocar';
-    }, undefined, (err) => {
-        console.error(err);
-        document.getElementById('status').innerHTML = '❌ Error cargando modelo';
-    });
-    
-    // AR
-    const btn = ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] });
-    document.getElementById('ar-container').appendChild(btn);
-    
-    let reticle;
-    const geometry = new THREE.RingGeometry(0.15, 0.2, 32);
-    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
-    reticle = new THREE.Mesh(geometry, material);
-    reticle.rotation.x = -Math.PI / 2;
-    scene.add(reticle);
-    
-    let hitTestSource = null;
-    renderer.xr.addEventListener('sessionstart', async () => {
-        const session = renderer.xr.getSession();
-        const space = await session.requestReferenceSpace('viewer');
-        hitTestSource = await session.requestHitTestSource({ space: space });
-        session.addEventListener('select', () => {
-            if (model && reticle.visible) {
-                model.position.copy(reticle.position);
-                model.visible = true;
-            }
-        });
-    });
-    
-    function renderFrame(timestamp, frame) {
-        if (frame && hitTestSource) {
-            const refSpace = renderer.xr.getReferenceSpace();
-            const results = frame.getHitTestResults(hitTestSource);
-            if (results.length) {
-                const pose = results[0].getPose(refSpace);
-                reticle.visible = true;
-                reticle.position.copy(pose.transform.position);
-            } else {
-                reticle.visible = false;
-            }
+    // Subir archivo propio
+    fileInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file && file.name.endsWith('.glb')) {
+            const url = URL.createObjectURL(file);
+            currentModelUrl = url;
+            mostrarCompartir(url);
+        } else {
+            alert('Por favor sube un archivo .glb');
         }
-        renderer.render(scene, camera);
+    });
+    
+    // Usar modelo demo
+    useDemoBtn.addEventListener('click', () => {
+        const demoUrl = 'https://threejs.org/examples/models/gltf/Horse.glb';
+        currentModelUrl = demoUrl;
+        mostrarCompartir(demoUrl);
+    });
+    
+    // Copiar enlace
+    copyLinkBtn.addEventListener('click', () => {
+        shareLink.select();
+        document.execCommand('copy');
+        alert('Enlace copiado! Compártelo por WhatsApp o cualquier red');
+    });
+    
+    // Cerrar visor AR
+    closeArBtn.addEventListener('click', () => {
+        arViewer.style.display = 'none';
+    });
+    
+    // Si la URL tiene parámetro model, abrir AR directamente
+    const urlParams = new URLSearchParams(window.location.search);
+    const modelParam = urlParams.get('model');
+    
+    if (modelParam) {
+        // Modo teléfono: mostrar AR automáticamente
+        document.getElementById('main-ui').style.display = 'none';
+        arViewer.style.display = 'block';
+        modelViewer.setAttribute('src', decodeURIComponent(modelParam));
     }
-    renderer.setAnimationLoop(renderFrame);
-}
 </script>
+
 </body>
 </html>
