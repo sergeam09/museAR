@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>AR Object Share - Realidad Aumentada</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <div id="ui-container">
+        <div class="controls">
+            <h1>📦 AR Object Share</h1>
+            
+            <div class="input-group">
+                <label>Modelo GLB:</label>
+                <input type="file" id="model-upload" accept=".glb">
+                <small>O usa el modelo demo</small>
+            </div>
+
+            <div class="input-group">
+                <label>URL del modelo (opcional):</label>
+                <input type="text" id="model-url" placeholder="https://ejemplo.com/modelo.glb">
+            </div>
+
+            <button id="start-ar">🎮 Iniciar AR</button>
+            <button id="share-link">🔗 Compartir Link</button>
+            <button id="share-qr">📱 Compartir QR</button>
+        </div>
+
+        <div id="qr-popup" class="popup hidden">
+            <div class="popup-content">
+                <span class="close">&times;</span>
+                <h2>Escanea este QR</h2>
+                <div id="qr-code"></div>
+                <p id="share-url"></p>
+                <button id="copy-link">Copiar enlace</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="ar-viewer">
+        <div id="status-message">Cargando AR...</div>
+        <button id="place-object">📍 Colocar objeto</button>
+        <button id="reset-position">🔄 Resetear posición</button>
+    </div>
+
+    <script type="module" src="script.js"></script>
+    <script src="qr-generator.js"></script>
+</body>
+</html>
